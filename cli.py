@@ -1,11 +1,10 @@
 import numpy as np
 from PIL import Image, ImageDraw
 import time
+import math
 
-MAX_DEPTH = 10
+
 DETAIL_THRESHOLD = 13
-SIZE_MULT = 1
-
 
 
 def compute_integral_images(image):
@@ -100,6 +99,7 @@ class QuadTree:
         self.width, self.height = image.size
         self.image = image
         self.max_depth = 0
+        self.max_allowed_depth = self.max_quadtree_depth()
 
         # Создание интегральных изображений
         image_integrals = compute_integral_images(self.image)
@@ -109,7 +109,7 @@ class QuadTree:
         self.build(self.root)
 
     def build(self, root):
-        if root.depth >= MAX_DEPTH or root.detail <= DETAIL_THRESHOLD:
+        if root.depth >= self.max_allowed_depth or root.detail <= DETAIL_THRESHOLD:
             if root.depth > self.max_depth:
                 self.max_depth = root.depth
             root.leaf = True
@@ -118,20 +118,6 @@ class QuadTree:
         root.split_quadrant()
         for child in root.children:
             self.build(child)
-
-    def create_image(self, custom_depth, show_lines=False):
-        new_image = Image.new('RGB', (self.width, self.height))
-        draw = ImageDraw.Draw(new_image)
-        draw.rectangle((0, 0, self.width, self.height), (0, 0, 0))
-
-        leaf_quadrants = self.get_leaf_quadrants(custom_depth)
-        for quadrant in leaf_quadrants:
-            if show_lines:
-                draw.rectangle(quadrant.bbox, quadrant.colour, outline=(0, 0, 0))
-            else:
-                draw.rectangle(quadrant.bbox, quadrant.colour)
-
-        return new_image
 
     def get_leaf_quadrants(self, depth):
         if depth > self.max_depth:
@@ -147,40 +133,62 @@ class QuadTree:
             for child in quadrant.children:
                 self.recursive_search(child, max_depth, append_leaf)
 
-    def create_gif(self, file_name, duration=500, loop=0, show_lines=False):
-        gif_frames = []
-        for depth in range(self.max_depth + 1):
-            frame = self.create_image(depth, show_lines=show_lines)
-            gif_frames.append(frame)
+    def max_quadtree_depth(self):
+        """Вычисляет максимальную глубину QuadTree для изображения."""
+        min_dim = min(self.width, self.height)
+        return math.floor(math.log2(min_dim))
 
-        # Добавление повторяющихся кадров на последнем уровне
-        end_frame = self.create_image(self.max_depth, show_lines=show_lines)
-        for _ in range(4):
-            gif_frames.append(end_frame)
 
-        # Сохранение GIF
-        gif_frames[0].save(
-            file_name,
-            save_all=True,
-            append_images=gif_frames[1:],
-            duration=duration,
-            loop=loop
-        )
+def create_image(tree, custom_depth, show_lines=False):
+    new_image = Image.new('RGB', (tree.width, tree.height))
+    draw = ImageDraw.Draw(new_image)
+    draw.rectangle((0, 0, tree.width, tree.height), (0, 0, 0))
+
+    leaf_quadrants = tree.get_leaf_quadrants(custom_depth)
+    for quadrant in leaf_quadrants:
+        if show_lines:
+            draw.rectangle(quadrant.bbox, quadrant.colour, outline=(0, 0, 0))
+        else:
+            draw.rectangle(quadrant.bbox, quadrant.colour)
+
+    return new_image
+
+
+def create_gif(tree, custom_depth, file_name, duration=500, loop=0, show_lines=False):
+    gif_frames = []
+    for depth in range(custom_depth + 1):
+        frame = create_image(tree, depth, show_lines=show_lines)
+        gif_frames.append(frame)
+
+    # Добавление повторяющихся кадров на последнем уровне
+    end_frame = create_image(tree, custom_depth, show_lines=show_lines)
+    for _ in range(4):
+        gif_frames.append(end_frame)
+
+    # Сохранение GIF
+    gif_frames[0].save(
+        file_name,
+        save_all=True,
+        append_images=gif_frames[1:],
+        duration=duration,
+        loop=loop
+    )
 
 
 if __name__ == '__main__':
     start_time = time.perf_counter()
     image_path = "test.jpg"
     image_1 = Image.open(image_path)
-    image_1 = image_1.resize((image_1.size[0] * SIZE_MULT, image_1.size[1] * SIZE_MULT))
+    #image_1 = image_1.resize((image_1.size[0] * SIZE_MULT, image_1.size[1] * SIZE_MULT))
     quadtree = QuadTree(image_1)
 
     # Создание изображения на конкретной глубине
-    depth = 9
-    image_to_save = quadtree.create_image(depth, show_lines=True)
-    image_to_save.save("mountain_quadtree.jpg")
+    depth = 11
+    print(quadtree.max_quadtree_depth())
+    #image_to_save = create_image(quadtree, depth, show_lines=False)
+    #image_to_save.save("mountain_quadtree.jpg")
     # Создание GIF файла
-    quadtree.create_gif("mountain_quadtree.gif", duration=500, show_lines=True)
+    #create_gif(quadtree, depth, "mountain_quadtree.gif", duration=500, show_lines=True)
     end_time = time.perf_counter()  # Конец отсчета времени
     elapsed_time = end_time - start_time
     print(f"Function executed in {elapsed_time:.4f} seconds")
