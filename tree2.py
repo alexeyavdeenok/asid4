@@ -4,8 +4,6 @@ import time
 import math
 from concurrent.futures import ThreadPoolExecutor
 
-DETAIL_THRESHOLD = 9
-
 
 def compute_integral_images(image):
     """Вычисляет интегральные изображения для каждого канала (R, G, B) и их квадратов."""
@@ -95,11 +93,12 @@ class Quadrant:
 
 
 class QuadTree:
-    def __init__(self, image):
+    def __init__(self, image, detail):
         self.width, self.height = image.size
         self.image = image
         self.max_depth = 0
         self.max_allowed_depth = self.max_quadtree_depth()
+        self.custom_detail = detail
 
         # Создание интегральных изображений
         image_integrals = compute_integral_images(self.image)
@@ -117,7 +116,7 @@ class QuadTree:
                 future.result()  # Дожидаемся завершения работы каждого потока
 
     def build(self, root):
-        if root.depth >= self.max_allowed_depth or root.detail <= DETAIL_THRESHOLD:
+        if root.depth >= self.max_allowed_depth or root.detail <= self.custom_detail:
             if root.depth > self.max_depth:
                 self.max_depth = root.depth
             root.leaf = True
@@ -147,48 +146,50 @@ class QuadTree:
         return math.floor(math.log2(min_dim))
 
 
-def create_image(tree, custom_depth, show_lines=False):
-    new_image = Image.new('RGB', (tree.width, tree.height))
-    draw = ImageDraw.Draw(new_image)
-    draw.rectangle((0, 0, tree.width, tree.height), (0, 0, 0))
-
-    leaf_quadrants = tree.get_leaf_quadrants(custom_depth)
-    for quadrant in leaf_quadrants:
-        if show_lines:
-            draw.rectangle(quadrant.bbox, quadrant.colour, outline=(0, 0, 0))
-        else:
-            draw.rectangle(quadrant.bbox, quadrant.colour)
-
-    return new_image
-
-
-def create_gif(tree, custom_depth, file_name, duration=500, loop=0, show_lines=False):
-    gif_frames = []
-    for depth in range(custom_depth + 1):
-        frame = create_image(tree, depth, show_lines=show_lines)
-        gif_frames.append(frame)
-
-    # Добавление повторяющихся кадров на последнем уровне
-    end_frame = create_image(tree, custom_depth, show_lines=show_lines)
-    for _ in range(4):
-        gif_frames.append(end_frame)
-
-    # Сохранение GIF
-    gif_frames[0].save(
-        file_name,
-        save_all=True,
-        append_images=gif_frames[1:],
-        duration=duration,
-        loop=loop
-    )
-
 
 if __name__ == '__main__':
+
+    def create_image(tree, custom_depth, show_lines=False):
+        new_image = Image.new('RGB', (tree.width, tree.height))
+        draw = ImageDraw.Draw(new_image)
+        draw.rectangle((0, 0, tree.width, tree.height), (0, 0, 0))
+
+        leaf_quadrants = tree.get_leaf_quadrants(custom_depth)
+        for quadrant in leaf_quadrants:
+            if show_lines:
+                draw.rectangle(quadrant.bbox, quadrant.colour, outline=(0, 0, 0))
+            else:
+                draw.rectangle(quadrant.bbox, quadrant.colour)
+
+        return new_image
+
+
+    def create_gif(tree, custom_depth, file_name, duration=500, loop=0, show_lines=False):
+        gif_frames = []
+        for depth in range(custom_depth + 1):
+            frame = create_image(tree, depth, show_lines=show_lines)
+            gif_frames.append(frame)
+
+        # Добавление повторяющихся кадров на последнем уровне
+        end_frame = create_image(tree, custom_depth, show_lines=show_lines)
+        for _ in range(4):
+            gif_frames.append(end_frame)
+
+        # Сохранение GIF
+        gif_frames[0].save(
+            file_name,
+            save_all=True,
+            append_images=gif_frames[1:],
+            duration=duration,
+            loop=loop
+        )
+
     start_time = time.perf_counter()
-    image_path = "test.jpg"
+    image_path = "img.png"
+    det = 12
     image_1 = Image.open(image_path)
     #image_1 = image_1.resize((image_1.size[0] * SIZE_MULT, image_1.size[1] * SIZE_MULT))
-    quadtree = QuadTree(image_1)
+    quadtree = QuadTree(image_1, det)
 
     # Создание изображения на конкретной глубине
     depth = 10
@@ -196,7 +197,7 @@ if __name__ == '__main__':
     #image_to_save = create_image(quadtree, depth, show_lines=False)
     #image_to_save.save("mountain_quadtree.jpg")
     # Создание GIF файла
-    create_gif(quadtree, depth, "mountain_quadtree.gif", duration=500, show_lines=True)
+    #create_gif(quadtree, depth, "mountain_quadtree.gif", duration=500, show_lines=True)
     end_time = time.perf_counter()  # Конец отсчета времени
     elapsed_time = end_time - start_time
     print(f"Function executed in {elapsed_time:.4f} seconds")
