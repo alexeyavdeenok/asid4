@@ -1,7 +1,7 @@
 import argparse
 from PIL import Image, ImageDraw
 import os
-from tree2 import QuadTree
+from tree import QuadTree
 import time
 
 
