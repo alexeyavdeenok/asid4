@@ -1,6 +1,6 @@
-import numpy as np
 import math
 from concurrent.futures import ThreadPoolExecutor
+import numpy as np
 
 
 def compute_integral_images(image):
@@ -33,7 +33,7 @@ def region_sum(data, bbox):
 def region_stats(integral, bbox):
     """Вычисляет сумму, среднее и стандартное отклонение для региона."""
     stats = {}
-    for name in ["R", "G", "B"]:
+    for name in ("R", "G", "B"):
         sum_pixels = region_sum(integral[name], bbox)
         sum_squares = region_sum(integral[f"{name}_squared"], bbox)
         pixel_count = (bbox[2] - bbox[0]) * (bbox[3] - bbox[1])
@@ -72,7 +72,7 @@ class Quadrant:
 
         # Вычисляем уровень детализации и средний цвет
         self.detail = get_detail(stats)
-        self.colour = tuple(int(stats[ch]["mean"]) for ch in ["R", "G", "B"])
+        self.colour = tuple(int(stats[ch]["mean"]) for ch in ("R", "G", "B"))
 
     def split_quadrant(self):
         left, top, right, bottom = self.bbox

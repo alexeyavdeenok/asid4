@@ -1,8 +1,8 @@
 import argparse
-from PIL import Image, ImageDraw
 import os
-from tree import QuadTree
 import time
+from PIL import Image, ImageDraw
+from tree import QuadTree
 
 
 def parse_arguments():
@@ -70,11 +70,11 @@ def parse_arguments():
         if 'rev' in args.save_gif:
             reverse_animation = True
             # Если 'rev' указан, находим 'bl' или 'nl' и присваиваем значение
-            line_option = True if 'bl' in args.save_gif else False
+            line_option = 'bl' in args.save_gif
         else:
             reverse_animation = False
             # Если 'rev' не указан, то находим 'bl' или 'nl' и присваиваем значение
-            line_option = True if 'bl' in args.save_gif else False
+            line_option = 'bl' in args.save_gif
     else:
         reverse_animation = None
         line_option = False  # Если 'save_gif' не указан, устанавливаем False по умолчанию
@@ -160,9 +160,6 @@ def main():
     except IOError as e:
         print(f"Error: Unable to open the image file. {e}")
         return
-    except Exception as e:
-        print(f"An unexpected error occurred: {e}")
-        return
     else:
         print("Image successfully loaded.")
 
@@ -174,7 +171,8 @@ def main():
         image_to_save = create_image(quadtree, depth, show_lines=picture)
         image_to_save.save('compressed_image.jpg')
     if gif_create['reverse_animation'] is not None:
-        create_gif(quadtree, depth, 'compress_image.gif', show_lines=gif_create['line_option'])
+        create_gif(quadtree, depth, 'compress_image.gif', show_lines=gif_create['line_option'],
+                   revers=gif_create['reverse_animation'])
 
     end_time = time.perf_counter()  # Конец отсчета времени
     elapsed_time = end_time - start_time
